@@ -307,5 +307,77 @@
     "onde": "Aplicativo FGTS",
     "fonte": "https://www.gov.br/trabalho-e-emprego/pt-br/servicos/trabalhador/fgts/fundo-de-garantia-do-tempo-de-servico-fgts",
     "verificado_em": "2026-11-13"
+  },
+    {
+    "id": 16,
+    "categoria": "Transporte e energia",
+    "titulo": "Quanto gasto indo de carro ao trabalho",
+    "palavras_chave": [
+      "quanto gasto de carro",
+      "gasto de carro",
+      "ir de carro",
+      "gasolina",
+      "carro eletrico",
+      "combustivel",
+      "custo do carro"
+    ],
+    "resposta": "Dá para estimar quanta energia, dinheiro e CO2 o seu deslocamento até o trabalho gasta em 1 mês.\nNo menu principal, escolha a opção 4 (Transporte e energia). Você compara o veículo a gasolina,\no carro elétrico carregado pela rede e o carro elétrico com painéis solares. O assistente pede só\na distância e os dias por semana, nunca seu endereço. Os valores são ESTIMATIVAS para orientação\n(preços de São Paulo, capital) e o custo de compra do veículo não entra na conta.",
+    "documentos": [
+      "Distância do trajeto em km (só ida ou ida e volta)",
+      "Quantos dias por semana você vai ao trabalho"
+    ],
+    "onde": "Menu principal deste assistente, opção 4 (Transporte e energia). Não precisa informar endereço.",
+    "fonte": "https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/arq-sintese-semanal/2026/sintese-precos-43.pdf",
+    "verificado_em": "2026-11-16"
+  },
+  {
+    "id": 17,
+    "categoria": "Transporte e energia",
+    "titulo": "Ônibus, metrô ou carro: quanto cada um gasta de energia e dinheiro",
+    "palavras_chave": [
+      "onibus ou carro",
+      "metro ou onibus",
+      "ir de onibus",
+      "onibus eletrico",
+      "transporte publico",
+      "quanto gasto de onibus",
+      "gasto de metro"
+    ],
+    "resposta": "Você pode comparar ônibus a diesel, ônibus elétrico e metrô para o seu trajeto. No menu principal,\nescolha a opção 4 (Transporte e energia) e depois \"Transporte público\". O assistente pergunta se\nvocê usa tarifa comum ou estudantil e calcula o custo do mês (tarifa × viagens), a energia por\npassageiro e o CO2. A lotação média do ônibus é uma premissa ESTIMADA e a conta considera uma\ntarifa por viagem, sem integrações.",
+    "documentos": [
+      "Distância do trajeto em km (só ida ou ida e volta)",
+      "Quantos dias por semana você vai ao trabalho",
+      "Tipo de tarifa: comum ou estudantil"
+    ],
+    "onde": "Menu principal deste assistente, opção 4 (Transporte e energia).",
+    "fonte": "https://www.sptrans.com.br/tarifas/",
+    "verificado_em": "2026-11-16"
+  },
+  {
+    "id": 18,
+    "categoria": "Transporte e energia",
+    "titulo": "Qual é a forma mais sustentável de ir ao trabalho",
+    "palavras_chave": [
+      "forma mais sustentavel",
+      "mais sustentavel",
+      "sustentabilidade",
+      "sustentavel",
+      "polui menos",
+      "menos poluente",
+      "impacto ambiental",
+      "meio ambiente",
+      "pegada de carbono",
+      "co2",
+      "painel solar",
+      "energia solar"
+    ],
+    "resposta": "Ir ao trabalho gasta energia e emite CO2, e a escolha do transporte muda muito esse resultado.\nNas estimativas do assistente, o metrô e o ônibus elétrico gastam bem menos energia por passageiro\ndo que o carro a gasolina e o ônibus a diesel. O carro elétrico emite pouco, mas só é renovável\nna proporção da energia que o carrega: a média da rede brasileira é de cerca de 86,8% renovável.\nCarregar com painéis solares é a opção mais limpa na operação, mas vale para a casa da família ou\npara o futuro, e os painéis têm custo de instalação. Para ver os números do seu trajeto, escolha\na opção 4 do menu principal (Transporte e energia). Os valores são ESTIMATIVAS.",
+    "documentos": [
+      "Distância do trajeto em km (só ida ou ida e volta)",
+      "Quantos dias por semana você vai ao trabalho"
+    ],
+    "onde": "Menu principal deste assistente, opção 4 (Transporte e energia). Não precisa informar endereço.",
+    "fonte": "https://www.epe.gov.br/sites-pt/publicacoes-dados-abertos/publicacoes/PublicacoesArquivos/publicacao-975/topico-847/BEN_Síntese_2026_PT.pdf",
+    "verificado_em": "2026-11-16"
   }
 ]
