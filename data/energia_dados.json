@@ -622,7 +622,7 @@
       "observacao": "Sem sombreamento. Sombras, orientação do telhado e falta de manutenção reduzem a geração."
     },
     "geracao_mensal_por_kwp": {
-      "valor": 101.25,
+      "valor": 96.75,
       "unidade": "kWh/kWp·mês",
       "tipo": "derivado",
       "descricao": "Energia gerada por kWp instalado em um mês médio.",
