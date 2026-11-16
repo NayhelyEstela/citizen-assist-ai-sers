@@ -5,6 +5,7 @@ import re
 import time
 from datetime import datetime
 from base_conhecimento import normalizar
+import modulo_energia
 
 LIMITE_ALTA = 6    # 6 pontos ou mais  -> confiança ALTA
 LIMITE_MEDIA = 3   # de 3 a 5 pontos   -> confiança MÉDIA
@@ -236,6 +237,17 @@ class Assistente:
                 "\nEssa orientação respondeu sua dúvida? (s/n): ")
             self.registrar("categoria", escolhida.titulo, escolhida.id, True,
                            ajudou, 1, round(time.time() - inicio, 1))
+    # ------------------------------------------------------------------
+    # Transporte e energia (opção 4)
+    # ------------------------------------------------------------------
+    def transporte_energia(self):
+        """Roda o módulo de energia e registra o atendimento no histórico."""
+        inicio = time.time()
+        resultado = modulo_energia.executar(self)
+        if resultado is None:       # saiu antes de ver qualquer resultado
+            return
+        self.registrar("energia", resultado["descricao"], None, True,
+                       resultado["ajudou"], 1, round(time.time() - inicio, 1))
 
     # ------------------------------------------------------------------
     # Indicadores

@@ -177,7 +177,8 @@ def preco_por_wp_solar(kwp, preco_2kwp, preco_4kwp):
 
 
 def dimensionar_solar(kwh_mes_carro, kwh_por_kwp_mes, potencia_minima_kwp,
-                      preco_2kwp, preco_4kwp, tarifa_kwh, fracao_compensada):
+                      preco_2kwp, preco_4kwp, tarifa_kwh, fracao_compensada,
+                      consumo_medio_residencial_kwh_mes):
     """Dimensiona os painéis para carregar o carro e calcula o retorno."""
     kwp_necessario = kwh_mes_carro / kwh_por_kwp_mes
     kwp_instalado = max(kwp_necessario, potencia_minima_kwp)
@@ -185,7 +186,9 @@ def dimensionar_solar(kwh_mes_carro, kwh_por_kwp_mes, potencia_minima_kwp,
     preco_wp = preco_por_wp_solar(kwp_instalado, preco_2kwp, preco_4kwp)
     investimento = kwp_instalado * 1000 * preco_wp
 
-    economia_mensal = kwh_mes_carro * tarifa_kwh * fracao_compensada
+    geracao = kwp_instalado * kwh_por_kwp_mes
+    aproveitado = min(geracao, kwh_mes_carro + consumo_medio_residencial_kwh_mes)
+    economia_mensal = aproveitado * tarifa_kwh * fracao_compensada
 
     if economia_mensal > 0:
         retorno_meses = investimento / economia_mensal

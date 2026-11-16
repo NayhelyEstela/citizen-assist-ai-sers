@@ -24,6 +24,7 @@ def mostrar_menu():
     print("1. Fazer uma pergunta")
     print("2. Navegar por categorias")
     print("3. Ver indicadores")
+    print("4. Transporte e energia")
     print("0. Sair")
 
 
@@ -44,13 +45,15 @@ def main():
     try:
         while True:
             mostrar_menu()
-            opcao = assistente.ler_opcao("Escolha uma opção: ", 3)
+            opcao = assistente.ler_opcao("Escolha uma opção: ", 4)
             if opcao == 1:
                 assistente.perguntar()
             elif opcao == 2:
                 assistente.navegar()
             elif opcao == 3:
                 assistente.exibir_indicadores()
+            elif opcao == 4:
+                assistente.transporte_energia()
             else:
                 break
         assistente.encerrar()

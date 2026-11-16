@@ -693,6 +693,15 @@
       "data_consulta": "2026-11-15",
       "periodo_referencia": "2026",
       "observacao": "Sistema conectado à rede, sem bateria. A economia real depende da regra vigente para o ano de adesão, do custo de disponibilidade (taxa mínima) e do horário de geração."
+    },
+    "consumo_medio_residencial_kwh_mes": {
+  "descricao": "Consumo médio mensal de eletricidade de uma unidade residencial no Brasil.",
+  "valor": 160,
+  "unidade": "kWh/mês",
+  "tipo": "estimado",
+  "fonte": "Premissa do grupo",
+  "link": "https://www.epe.gov.br/sites-pt/publicacoes-dados-abertos/publicacoes/PublicacoesArquivos/publicacao-894/PDE%202035_Caderno_Demanda_Eletricidade_rev_mme_20250914.pdf",
+  "data_consulta": "2026-11-16"
     }
   }
 }
