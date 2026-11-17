@@ -85,7 +85,7 @@ Foi a parte com melhor desempenho: **6 atendimentos (40%), todos marcados como �
 - A navegação por categorias (5) funcionou sem problemas e é uma boa saída quando a pergunta livre falha.
 
 
-## 4. Comentários dos perfis simulados
+## 4. Comentários dos usuários
 
 - **A:** "Gostei de ver o valor do mês com a meia-tarifa. Entendi que o metrô gasta bem menos energia"
 - **B:** "Quando não achou, pensei que o sistema não sabia a respeito. Só deu certo quando troquei 'pra' por 'para' sem saber." Nota 3: foi o único que sentiu dificuldade.
