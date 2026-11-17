@@ -8,8 +8,8 @@ Como o fluxo funciona (em ordem):
     1. Trajeto  : "Ainda não sei" (cenários estimados) ou "Já sei" (usuário informa)
     2. Tipo     : transporte público ou transporte próprio
     3. Opção    : ex.: ônibus a diesel, metrô, veículo a gasolina...
-    4. Resultado: energia, custo, CO2, fontes e avisos
-    5. Comparação com as outras opções do mesmo tipo
+    4. Resultado, comparação, recomendação e avisos (1ª camada, sem as fontes)
+    5. Pergunta: "quer ver as fontes dos dados?" (2ª camada, sob pedido)
     6. Se escolheu elétrico + solar: oferta de dimensionamento simples
     7. Extra    : "quer ver como ficaria no outro tipo de transporte?"
 
@@ -216,7 +216,6 @@ def ler_numero(texto, maximo, aviso_acima, unidade, inteiro=False):
             print("Valor inválido. Digite apenas números (ex.: 12,5).")
             continue
 
-        # float("nan") e float("inf") "funcionam" no Python, mas não servem
         if not math.isfinite(valor):
             print("Valor inválido. Digite apenas números (ex.: 12,5).")
             continue
@@ -491,11 +490,13 @@ def notas_da_opcao(opcao, dados):
             "Considera uma tarifa por viagem, sem integrações."]
 
 
-def mostrar_fontes(dados, chaves, titulo="Dados usados (tipo e fonte):"):
+def mostrar_fontes(dados, chaves, titulo="Dados usados (tipo e fonte):", inicio=1):
+    """Mostra as fontes numeradas. Devolve o próximo número livre (para continuar a lista)."""
     print(f"\n{titulo}")
+    numero_item = inicio
     for chave in chaves:
         item = dados[chave]
-        linha = (f"  - {item['descricao']} "
+        linha = (f"  {numero_item}. {item['descricao']} "
                  f"{valor_simples(item['valor'])} {item['unidade']} "
                  f"[{str(item.get('tipo', 'estimado')).upper()}] "
                  f"Fonte: {item.get('fonte', 'não informada')}")
@@ -503,10 +504,12 @@ def mostrar_fontes(dados, chaves, titulo="Dados usados (tipo e fonte):"):
             linha += f" (consulta em {item['data_consulta']})"
         print(linha)
         if item.get("link"):
-            print(f"    Link: {item['link']}")
+            print(f"     Link: {item['link']}")
+        numero_item += 1
+    return numero_item
 
 
-def mostrar_fontes_comparacao(escolhida, opcoes, dados, tipo_tarifa):
+def mostrar_fontes_comparacao(escolhida, opcoes, dados, tipo_tarifa, inicio=1):
     """Fontes dos dados das OUTRAS opções (as da escolhida já foram mostradas)."""
     ja_mostradas = chaves_das_fontes(escolhida, tipo_tarifa)
     novas = []
@@ -517,8 +520,10 @@ def mostrar_fontes_comparacao(escolhida, opcoes, dados, tipo_tarifa):
             if chave not in ja_mostradas and chave not in novas:
                 novas.append(chave)
     if novas:
-        mostrar_fontes(dados, novas,
-                       "Dados usados nas outras opções comparadas (tipo e fonte):")
+        return mostrar_fontes(
+            dados, novas,
+            "Dados usados nas outras opções comparadas (tipo e fonte):", inicio)
+    return inicio
 
 
 def mostrar_resultado(opcao, viagem, resultado, dados, tipo_tarifa):
@@ -551,8 +556,13 @@ def mostrar_resultado(opcao, viagem, resultado, dados, tipo_tarifa):
     for nota in notas_da_opcao(opcao, dados):
         print(f"  - {nota}")
 
-    mostrar_fontes(dados, chaves_das_fontes(opcao, tipo_tarifa))
     print(f"\n{AVISO_GERAL}")
+
+
+def mostrar_fontes_da_analise(opcao, opcoes, dados, tipo_tarifa):
+    """2ª camada: lista numerada das fontes (da opção escolhida e das comparadas)."""
+    proximo = mostrar_fontes(dados, chaves_das_fontes(opcao, tipo_tarifa))
+    mostrar_fontes_comparacao(opcao, opcoes, dados, tipo_tarifa, proximo)
 
 
 def descrever_diferenca(referencia, alternativa):
@@ -713,7 +723,7 @@ def mostrar_recomendacao(escolhida, resultados, recomendacao):
 # ----------------------------------------------------------------------
 # 8. Dimensionamento solar simples
 # ----------------------------------------------------------------------
-def mostrar_dimensionamento(dados, energia_kwh_mes):
+def mostrar_dimensionamento(assistente, dados, energia_kwh_mes):
     """Calcula e mostra o tamanho dos painéis e o tempo de retorno."""
     kwh_por_kwp = calc.geracao_mensal_por_kwp(
         dado(dados, "horas_sol_pleno_sao_paulo"),
@@ -758,13 +768,15 @@ def mostrar_dimensionamento(dados, energia_kwh_mes):
         print("Atenção: esse porte passa de 4 kWp, faixa sem preço pesquisado. "
               "O investimento pode estar subestimado.")
 
-    mostrar_fontes(dados, CHAVES_DIMENSIONAMENTO)
-
     print("\nSimplificações: sem sombra, sem bateria, sistema ligado à rede,\n"
           "sem considerar o consumo mínimo cobrado pela distribuidora,\n"
           "troca do inversor não incluída. CO2 de operação dos painéis\n"
           "considerado zero. Vale para a casa da família ou para o futuro.")
     print(AVISO_GERAL)
+
+    if assistente.ler_sim_nao("\nQuer ver as fontes dos dados do "
+                              "dimensionamento? (s/n): "):
+        mostrar_fontes(dados, CHAVES_DIMENSIONAMENTO)
 
 
 # ----------------------------------------------------------------------
@@ -793,12 +805,16 @@ def fluxo_tipo(assistente, dados, viagem, tipo):
     mostrar_comparacao(escolhida, resultados, opcoes)
     recomendacao = montar_recomendacao(resultados, opcoes)
     mostrar_recomendacao(escolhida, resultados, recomendacao)
-    mostrar_fontes_comparacao(escolhida, opcoes, dados, tipo_tarifa)
+
+    # Fim da 1ª camada. A 2ª camada (só as fontes numeradas) é sob pedido.
+    if assistente.ler_sim_nao("\nQuer ver as fontes dos dados usados? (s/n): "):
+        mostrar_fontes_da_analise(escolhida, opcoes, dados, tipo_tarifa)
 
     if escolhida == "eletrico_solar":
         if assistente.ler_sim_nao("\nQuer um dimensionamento simples dos painéis "
                                   "para mais precisão? (s/n): "):
-            mostrar_dimensionamento(dados, resultados[escolhida]["energia_kwh"])
+            mostrar_dimensionamento(assistente, dados,
+                                    resultados[escolhida]["energia_kwh"])
 
     r = resultados[escolhida]
     return {

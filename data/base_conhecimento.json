@@ -244,9 +244,13 @@
       "tirar o fgts",
       "saque dispensa sem justa causa",
       "saque rescisao",
-      "multa do fgts"
+      "multa do fgts",
+      "pedido de demissão",
+      "pedir demissão e sacar fgts",
+      "posso sacar fgts se pedir demissão",
+      "saque fgts pedido de demissão"
     ],
-    "resposta": "Quem foi demitido sem justa causa pode sacar o saldo do FGTS, desde que a empresa tenha\ninformado a dispensa. O pedido pode ser feito 100% pelo app FGTS (\"Solicite seu saque 100%\ndigital\"): você indica uma conta bancária no seu nome, de qualquer banco, e o valor é\ncreditado em até 5 dias úteis. Se a liberação não for automática, é preciso ir a uma agência\nda Caixa com os documentos. Atenção: quem escolheu o Saque-Aniversário só pode sacar a multa\nrescisória na demissão; o restante do saldo só sai se cumprir outra regra de saque.",
+    "resposta": "Quem foi demitido sem justa causa pode sacar o saldo do FGTS, desde que a empresa tenha\ninformado a dispensa. O pedido pode ser feito 100% pelo app FGTS (\"Solicite seu saque 100%\ndigital\"): você indica uma conta bancária no seu nome, de qualquer banco, e o valor é\ncreditado em até 5 dias úteis. Se a liberação não for automática, é preciso ir a uma agência\nda Caixa com os documentos. Atenção: quem escolheu o Saque-Aniversário só pode sacar a multa\nrescisória na demissão; o restante do saldo só sai se cumprir outra regra de saque. Já quem pede\ndemissão não pode sacar o FGTS por causa desse desligamento. O saldo permanece na conta vinculada\ne poderá ser retirado posteriormente caso o trabalhador se enquadre em outra hipótese legal de saque.\"",
     "documentos": [
       "Documento de identificação",
       "CPF ou PIS/PASEP/NIS",
@@ -254,7 +258,7 @@
     ],
     "onde": "Aplicativo FGTS (saque 100% digital) ou agência da Caixa",
     "fonte": "https://www.fgts.gov.br/Paginas/subpaginas/saque-dispensa.aspx",
-    "verificado_em": "2026-11-13"
+    "verificado_em": "2026-11-17"
   },
   {
     "id": 14,
@@ -268,7 +272,10 @@
       "documentos para ser contratado",
       "documentos para trabalhar",
       "documentos para o primeiro emprego",
-      "primeira carteira assinada"
+      "primeira carteira assinada",
+      "ser contratado",
+      "pra ser contratado",
+      "para ser contratado"
     ],
     "resposta": "Para ser contratado com carteira assinada pela primeira vez, normalmente basta informar seu\nCPF à empresa: ele é suficiente para ela fazer o seu registro no eSocial. A carteira de\ntrabalho física não é mais necessária na grande maioria dos casos. A Carteira de Trabalho\nDigital já existe para todo mundo que tem CPF e é gratuita: você só precisa habilitá-la no\napp, com sua conta gov.br. Depois que a empresa envia o registro, o contrato aparece no app\nem até 48 horas. O número do PIS é gerado pela empresa no primeiro registro.",
     "documentos": [
@@ -341,7 +348,11 @@
       "onibus eletrico",
       "transporte publico",
       "quanto gasto de onibus",
-      "gasto de metro"
+      "gasto de metro",
+      "indo de onibus",
+      "de onibus",
+      "carro ou onibus",
+      "de metro"
     ],
     "resposta": "Você pode comparar ônibus a diesel, ônibus elétrico e metrô para o seu trajeto. No menu principal,\nescolha a opção 4 (Transporte e energia) e depois \"Transporte público\". O assistente pergunta se\nvocê usa tarifa comum ou estudantil e calcula o custo do mês (tarifa × viagens), a energia por\npassageiro e o CO2. A lotação média do ônibus é uma premissa ESTIMADA e a conta considera uma\ntarifa por viagem, sem integrações.",
     "documentos": [
