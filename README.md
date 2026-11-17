@@ -16,7 +16,7 @@
 | Kauanne Paula de Oliveira    | 574191|
 | Nayhely Estela Calle Castillo | 571416|
 
-**Vídeo técnico (YouTube, não listado):** [PENDENTE]
+**Vídeo técnico (YouTube, não listado):** https://youtu.be/xndIVWnT3-k
 
 ---
 
