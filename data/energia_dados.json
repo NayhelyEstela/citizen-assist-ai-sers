@@ -668,7 +668,7 @@
       "link": "https://www.pv-magazine.com/2026/09/26/pv-system-costs-increase-7-percent-brazil-h1/",
       "data_consulta": null,
       "periodo_referencia": "junho/2026",
-      "observacao": "Se o carro elétrico exigir menos que isso, o investimento mínimo vale R$ 2.000 Wp x preço/Wp. A sobra de geração abate o consumo da casa (créditos); o assistente deve avisar que a economia extra depende do consumo da residência."
+      "observacao": "Se o carro elétrico exigir menos que isso, o investimento mínimo vale R$ 2.000 x preço/Wp. A sobra de geração abate o consumo da casa (créditos); o assistente deve avisar que a economia extra depende do consumo da residência."
     },
     "vida_util_sistema_solar": {
       "valor": 25,

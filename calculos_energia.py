@@ -89,20 +89,47 @@ def parte_renovavel_da_rede(energia_kwh, percentual_renovavel):
     return energia_kwh * percentual_renovavel / 100
 
 
-def calcular_eletrico_solar(km_mes, kwh_por_km):
+def custo_paineis_do_carro(kwh_mes_carro, kwh_por_kwp_mes, potencia_minima_kwp,
+                           preco_2kwp, preco_4kwp, vida_util_anos):
+    """Custo MENSAL dos painéis que cabe ao carro (investimento diluído na vida útil).
+
+    Para a comparação ser justa, o solar não pode aparecer como "grátis":
+    os painéis custam caro no começo. Aqui o investimento é dividido pelos
+    meses de vida útil e fica só a PARCELA do carro (kWp que o carro precisa).
+    O resto do sistema (até o mínimo de 2 kWp) serve a casa, que tem a sua
+    própria economia, mostrada no dimensionamento.
+    Não inclui juros, troca do inversor nem a compra do veículo.
+    """
+    kwp_necessario = kwh_mes_carro / kwh_por_kwp_mes
+    kwp_instalado = max(kwp_necessario, potencia_minima_kwp)
+    preco_wp = preco_por_wp_solar(kwp_instalado, preco_2kwp, preco_4kwp)
+    meses = vida_util_anos * 12
+    investimento_carro = kwp_necessario * 1000 * preco_wp
+    return {
+        "kwp_necessario": kwp_necessario,
+        "kwp_instalado": kwp_instalado,
+        "preco_wp": preco_wp,
+        "investimento_sistema": kwp_instalado * 1000 * preco_wp,
+        "investimento_carro": investimento_carro,
+        "meses": meses,
+        "custo_mensal": investimento_carro / meses,
+    }
+
+
+def calcular_eletrico_solar(km_mes, kwh_por_km, paineis):
     """Carro elétrico carregado com painéis solares em casa.
 
-    A energia é a mesma do elétrico na rede. A diferença é a origem:
-    a energia vem do sol, então o custo mensal de eletricidade para o carro
-    é R$ 0 e o CO2 de operação é 0 (o custo dos painéis aparece à parte,
-    em dimensionar_solar). Não contamos emissões de fabricar os painéis.
+    A energia é a mesma do elétrico na rede. A diferença é a origem: vem do
+    sol, então não há conta de eletricidade para carregar o carro e o CO2 de
+    operação é 0. O custo mensal é a parcela dos painéis atribuída ao carro
+    (ver custo_paineis_do_carro). Emissões de fabricação não entram.
     """
     return {
         "energia_kwh": km_mes * kwh_por_km,
-        "custo_reais": 0.0,
+        "custo_reais": paineis["custo_mensal"],
         "co2_kg": 0.0,
+        "paineis": paineis,    # detalhes, para mostrar na tela
     }
-
 
 # ----------------------------------------------------------------------
 # 5. Transporte público (funções diferentes: a pessoa paga TARIFA)
@@ -216,3 +243,23 @@ def diferenca_percentual(valor_referencia, valor_alternativa):
     if valor_referencia == 0:
         return 0.0
     return (valor_referencia - valor_alternativa) / valor_referencia * 100
+
+# ----------------------------------------------------------------------
+# 8. Recomendação (qual opção é a melhor em cada critério)
+# ----------------------------------------------------------------------
+LIMITE_PARECIDO = 0.05      # melhor e pior com menos de 5% de diferença = "praticamente igual"
+TOLERANCIA_EMPATE = 0.005   # opções até 0,5% acima do menor valor contam como empate
+
+
+def melhores_opcoes(valores):
+    """Descobre qual(is) opção(ões) tem o MENOR valor em um critério.
+      - lista_das_melhores: mais de uma só quando há empate;
+      - parecido: True se a diferença entre a melhor e a pior é menor que 5%
+        (nesse caso não vale a pena apontar uma vencedora).
+    """
+    menor = min(valores.values())
+    maior = max(valores.values())
+    parecido = maior == 0 or (maior - menor) / maior < LIMITE_PARECIDO
+    limite = menor + abs(menor) * TOLERANCIA_EMPATE
+    melhores = [opcao for opcao, valor in valores.items() if valor <= limite]
+    return melhores, parecido

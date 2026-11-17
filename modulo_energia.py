@@ -96,6 +96,16 @@ DADOS_NECESSARIOS = [
     "fracao_tarifa_compensada_scee", "consumo_medio_residencial_kwh_mes"
 ]
 
+# Dados usados no custo dos painéis (comparação) e no dimensionamento solar
+CHAVES_PAINEIS = [
+    "horas_sol_pleno_sao_paulo", "desempenho_sistema_solar",
+    "custo_sistema_solar_2kwp", "custo_sistema_solar_4kwp",
+    "potencia_minima_sistema_solar", "vida_util_sistema_solar",
+]
+CHAVES_DIMENSIONAMENTO = CHAVES_PAINEIS + [
+    "tarifa_energia_com_tributos", "bandeira_tarifaria_novembro_2026",
+    "fracao_tarifa_compensada_scee", "consumo_medio_residencial_kwh_mes",
+]
 
 class VoltarAoMenu(Exception):
     """Sinal de que o usuário digitou 0 e quer sair do fluxo de energia.
@@ -278,7 +288,7 @@ def viagem_estimada(assistente, dados):
     dias_por_semana = round(dado(dados, "dias_uteis_mes") / semanas, 2)
     viagens = calc.viagens_no_mes(dias_por_semana, semanas,
                                   dado(dados, "viagens_por_dia"))
-    return montar_viagem(km_ida, viagens, "ESTIMADO")
+    return montar_viagem(km_ida, viagens, "ESTIMADO", dias_por_semana)
 
 
 def viagem_informada(assistente, dados):
@@ -308,16 +318,17 @@ def viagem_informada(assistente, dados):
 
     viagens = calc.viagens_no_mes(dias, dado(dados, "semanas_por_mes"),
                                   dado(dados, "viagens_por_dia"))
-    return montar_viagem(km_ida, viagens, "INFORMADO PELO USUÁRIO")
+    return montar_viagem(km_ida, viagens, "INFORMADO PELO USUÁRIO", dias)
 
 
-def montar_viagem(km_ida, viagens_mes, origem):
+def montar_viagem(km_ida, viagens_mes, origem, dias_semana):
     """Junta os números do trajeto em um dicionário (usado por todas as contas)."""
     return {
         "km_por_viagem": km_ida,
         "viagens_mes": viagens_mes,
         "km_mes": calc.km_no_mes(km_ida, viagens_mes),
         "origem": origem,    # "ESTIMADO" ou "INFORMADO PELO USUÁRIO"
+        "dias_semana": dias_semana,
     }
 
 
@@ -383,7 +394,17 @@ def calcular_opcao(opcao, viagem, dados, tipo_tarifa):
             return calc.calcular_eletrico_rede(
                 km_mes, kwh_km, tarifa_eletricidade(dados),
                 dado(dados, "fator_emissao_rede_eletrica"))
-        return calc.calcular_eletrico_solar(km_mes, kwh_km)
+        kwh_mes_carro = km_mes * kwh_km
+        kwh_por_kwp = calc.geracao_mensal_por_kwp(
+            dado(dados, "horas_sol_pleno_sao_paulo"),
+            dado(dados, "desempenho_sistema_solar"))
+        paineis = calc.custo_paineis_do_carro(
+            kwh_mes_carro, kwh_por_kwp,
+            dado(dados, "potencia_minima_sistema_solar"),
+            dado(dados, "custo_sistema_solar_2kwp"),
+            dado(dados, "custo_sistema_solar_4kwp"),
+            dado(dados, "vida_util_sistema_solar"))
+        return calc.calcular_eletrico_solar(km_mes, kwh_km, paineis)
 
     # A partir daqui são as opções de transporte público (pagam tarifa)
     tarifa = dado(dados, chave_da_tarifa(opcao, tipo_tarifa))
@@ -424,7 +445,8 @@ def chaves_das_fontes(opcao, tipo_tarifa):
                 "fator_emissao_rede_eletrica",
                 "participacao_renovavel_matriz_eletrica"]
     if opcao == "eletrico_solar":
-        return ["consumo_carro_eletrico_pbev_kwh_km", "fator_uso_real_veiculo"]
+        return (["consumo_carro_eletrico_pbev_kwh_km", "fator_uso_real_veiculo"]
+                + CHAVES_PAINEIS)
 
     tarifa = chave_da_tarifa(opcao, tipo_tarifa)
     if opcao == "onibus_diesel":
@@ -451,12 +473,15 @@ def notas_da_opcao(opcao, dados):
                 "renovável.",
                 "O custo de compra do veículo NÃO foi considerado."]
     if opcao == "eletrico_solar":
-        return ["ESTIMADO: custo de eletricidade e CO2 de operação iguais a zero. "
-                "O custo dos painéis aparece à parte, no dimensionamento.",
+        return ["ESTIMADO: sem conta de eletricidade para carregar o carro; o custo "
+                "é só a parcela dos painéis que cabe ao carro, diluída na vida útil "
+                "estimada (sem juros nem troca do inversor). CO2 de operação zero.",
                 "Emissões de fabricar os painéis e o veículo não entram.",
                 "Vale para a casa da família ou para o futuro: o jovem pode "
                 "não ter casa própria.",
                 "O custo de compra do veículo NÃO foi considerado."]
+
+
     if opcao in ("onibus_diesel", "onibus_eletrico"):
         return ["A energia é por passageiro: consumo do ônibus ÷ lotação. "
                 "A lotação média é ESTIMADA (premissa do grupo).",
@@ -466,16 +491,34 @@ def notas_da_opcao(opcao, dados):
             "Considera uma tarifa por viagem, sem integrações."]
 
 
-def mostrar_fontes(dados, chaves):
-    print("\nDados usados (tipo e fonte):")
+def mostrar_fontes(dados, chaves, titulo="Dados usados (tipo e fonte):"):
+    print(f"\n{titulo}")
     for chave in chaves:
         item = dados[chave]
         linha = (f"  - {item['descricao']} "
                  f"{valor_simples(item['valor'])} {item['unidade']} "
-                 f"[{item['tipo'].upper()}] Fonte: {item['fonte']}")
+                 f"[{str(item.get('tipo', 'estimado')).upper()}] "
+                 f"Fonte: {item.get('fonte', 'não informada')}")
         if item.get("data_consulta"):
             linha += f" (consulta em {item['data_consulta']})"
         print(linha)
+        if item.get("link"):
+            print(f"    Link: {item['link']}")
+
+
+def mostrar_fontes_comparacao(escolhida, opcoes, dados, tipo_tarifa):
+    """Fontes dos dados das OUTRAS opções (as da escolhida já foram mostradas)."""
+    ja_mostradas = chaves_das_fontes(escolhida, tipo_tarifa)
+    novas = []
+    for opcao in opcoes:
+        if opcao == escolhida:
+            continue
+        for chave in chaves_das_fontes(opcao, tipo_tarifa):
+            if chave not in ja_mostradas and chave not in novas:
+                novas.append(chave)
+    if novas:
+        mostrar_fontes(dados, novas,
+                       "Dados usados nas outras opções comparadas (tipo e fonte):")
 
 
 def mostrar_resultado(opcao, viagem, resultado, dados, tipo_tarifa):
@@ -498,10 +541,11 @@ def mostrar_resultado(opcao, viagem, resultado, dados, tipo_tarifa):
         renovavel = calc.parte_renovavel_da_rede(resultado["energia_kwh"], pct)
         print(f"Parte renovável (média da rede): {numero(renovavel)} kWh")
     if opcao == "eletrico_solar":
-        print("\nPor que R$ 0,00 e 0,0 kg de CO2? A energia vem dos painéis da\n"
-              "casa, então você não paga eletricidade da rede para carregar o\n"
-              "carro, e a operação dos painéis não emite CO2. Mas os painéis\n"
-              "têm custo de instalação, que não está nesse valor.")
+        p = resultado["paineis"]
+        print("\nComo o custo foi calculado: você não paga eletricidade da rede para\n"
+              "carregar o carro. O valor acima é só a parcela dos painéis que cabe ao\n"
+              f"carro ({numero(p['kwp_necessario'], 2)} kWp = {reais(p['investimento_carro'])}), diluída em {numero(p['meses'] / 12, 0)} anos ({numero(p['meses'], 0)} meses).\n"
+              "O CO2 de operação dos painéis é zero.")
 
     print("\nObservações:")
     for nota in notas_da_opcao(opcao, dados):
@@ -543,15 +587,128 @@ def mostrar_comparacao(escolhida, resultados, opcoes):
               f"({descrever_diferenca(base['co2_kg'], r['co2_kg'])})")
 
         if opcao == "eletrico_solar":
-            print("  Por que R$ 0,00 e 0,0 kg de CO2? A energia vem dos painéis da "
-                  "casa, então você não paga eletricidade da rede para carregar o "
-                  "carro, e a operação dos painéis não emite CO2. Mas os painéis "
-                  "têm custo de instalação, que não está nesse valor.")
+            print("  Obs.: o custo do solar é só a parcela dos painéis que cabe ao\n"
+                  "carro, diluída na vida útil estimada. Você não paga eletricidade da rede para\n"
+                  "carregar o carro e o CO2 de operação é zero.")
 
     if "eletrico_solar" in opcoes and escolhida != "eletrico_solar":
         print("Para ver o investimento e o tempo de retorno, escolha "
               "'Veículo elétrico + painéis solares'.")
 
+# ----------------------------------------------------------------------
+# 7B. Recomendação (logo abaixo da comparação)
+# ----------------------------------------------------------------------
+def formatar_custo(valor):
+    return reais(valor)
+
+
+def formatar_energia(valor):
+    return numero(valor) + " kWh"
+
+
+def formatar_co2(valor):
+    return numero(valor) + " kg de CO2"
+
+
+# Os três critérios usados para recomendar. Para todos, MENOR é melhor.
+CRITERIOS = [
+    {"chave": "custo_reais", "rotulo": "Menor custo mensal",
+     "objetivo": "economizar dinheiro", "reduzir": "o custo",
+     "formatar": formatar_custo},
+    {"chave": "energia_kwh", "rotulo": "Menor consumo de energia",
+     "objetivo": "gastar menos energia", "reduzir": "o consumo de energia",
+     "formatar": formatar_energia},
+    {"chave": "co2_kg", "rotulo": "Menor emissão de CO2",
+     "objetivo": "emitir menos CO2", "reduzir": "as emissões",
+     "formatar": formatar_co2},
+]
+
+
+def nomes_juntos(chaves, conector="e"):
+    """['metro', 'onibus_eletrico'] -> 'Metrô e Ônibus elétrico' (ou 'ou')."""
+    nomes = [NOMES[chave] for chave in chaves]   # sem "(ESTIMADO)": a condição já avisa
+    if len(nomes) <= 1:
+        return "".join(nomes)
+    return ", ".join(nomes[:-1]) + f" {conector} " + nomes[-1]
+
+
+def montar_recomendacao(resultados, opcoes):
+    """Descobre a melhor opção em cada critério. Devolve um dicionário por critério."""
+    recomendacao = {}
+    for criterio in CRITERIOS:
+        chave = criterio["chave"]
+        valores = {opcao: resultados[opcao][chave] for opcao in opcoes}
+        melhores, parecido = calc.melhores_opcoes(valores)
+        recomendacao[chave] = {"melhores": melhores, "parecido": parecido,
+                               "valor": min(valores.values())}
+    return recomendacao
+
+
+def texto_melhores(item):
+    """Texto curto de um critério, usado no CSV."""
+    if item["parecido"]:
+        return "praticamente igual"
+    return " | ".join(NOMES[opcao] for opcao in item["melhores"])
+
+
+def mostrar_recomendacao(escolhida, resultados, recomendacao):
+    """Mostra a recomendação gerada a partir dos resultados calculados."""
+    print("\n=== Recomendação para o seu trajeto (ESTIMADA) ===")
+
+    # 1) Melhor opção em cada critério
+    for criterio in CRITERIOS:
+        item = recomendacao[criterio["chave"]]
+        if item["parecido"]:
+            print(f"{criterio['rotulo']}: as opções ficam praticamente iguais "
+                  "(diferença menor que 5%).")
+        else:
+            print(f"{criterio['rotulo']}: {nomes_juntos(item['melhores'])} "
+                  f"({criterio['formatar'](item['valor'])})")
+
+    # 2) Síntese: uma frase juntando os critérios em que há diferença relevante
+    decisivos = [c for c in CRITERIOS if not recomendacao[c["chave"]]["parecido"]]
+    print()
+    if not decisivos:
+        print("Síntese: as opções ficam parecidas em custo, energia e CO2. "
+              "Escolha pelo que for mais prático para você.")
+    else:
+        # opções que são a melhor (ou empatam como melhor) em TODOS os critérios relevantes
+        primeira = recomendacao[decisivos[0]["chave"]]["melhores"]
+        em_todos = [op for op in primeira
+                    if all(op in recomendacao[c["chave"]]["melhores"] for c in decisivos)]
+        if em_todos:
+            print(f"Síntese: {nomes_juntos(em_todos)} é a opção mais vantajosa "
+                  "em custo de uso, energia e CO₂ de operação com diferença relevante.")
+        else:
+            partes = [f"para {c['objetivo']}, "
+                      f"{nomes_juntos(recomendacao[c['chave']]['melhores'])}"
+                      for c in decisivos]
+            texto = "; ".join(partes)
+            print("Síntese: não há uma opção melhor em tudo. "
+                  + texto[0].upper() + texto[1:] + ".")
+
+    # 3) O que mudaria em relação à escolha do usuário
+    base = resultados[escolhida]
+    for criterio in CRITERIOS:
+        item = recomendacao[criterio["chave"]]
+        if item["parecido"] or escolhida in item["melhores"]:
+            continue
+        diferenca = base[criterio["chave"]] - item["valor"]
+        print(f"  - Em relação à sua escolha ({NOMES[escolhida]}), trocar por "
+              f"{nomes_juntos(item['melhores'], 'ou')} reduziria {criterio['reduzir']} em "
+              f"{criterio['formatar'](diferenca)} por mês.")
+
+    # 4) Condições da recomendação
+    if any(not recomendacao[c["chave"]]["parecido"]
+           and "eletrico_solar" in recomendacao[c["chave"]]["melhores"]
+           for c in CRITERIOS):
+        print("\nCondição: no carro elétrico + painéis solares, o custo é só a\n"
+              "parcela dos painéis atribuída ao carro (diluída na vida útil\n"
+              "estimada) e o CO2 de operação é zero por premissa. A compra do\n"
+              "veículo, a troca do inversor e as emissões de fabricação NÃO\n"
+              "entram nessa comparação.")
+    print("\nA recomendação compara só as opções deste tipo de transporte e usa "
+          "estimativas: não é garantia de economia.")
 
 # ----------------------------------------------------------------------
 # 8. Dimensionamento solar simples
@@ -560,8 +717,8 @@ def mostrar_dimensionamento(dados, energia_kwh_mes):
     """Calcula e mostra o tamanho dos painéis e o tempo de retorno."""
     kwh_por_kwp = calc.geracao_mensal_por_kwp(
         dado(dados, "horas_sol_pleno_sao_paulo"),
-        dado(dados, "desempenho_sistema_solar"),
-        dado(dados, "consumo_medio_residencial_kwh_mes"))
+        dado(dados, "desempenho_sistema_solar"))
+    vida = dado(dados, "vida_util_sistema_solar")
 
     r = calc.dimensionar_solar(
         energia_kwh_mes, kwh_por_kwp,
@@ -579,7 +736,9 @@ def mostrar_dimensionamento(dados, energia_kwh_mes):
           f"(mínimo de {numero(dado(dados, 'potencia_minima_sistema_solar'), 0)} kWp)")
     print(f"Geração mensal: {numero(r['geracao_mensal_kwh'])} kWh")
     print(f"Investimento estimado: {reais(r['investimento_reais'])}")
-    print(f"Economia mensal estimada na conta de luz (carro + casa)): {reais(r['economia_mensal_reais'])}")
+    print(f"Custo mensal do sistema todo, diluído em {numero(vida, 0)} anos: "
+          f"{reais(r['investimento_reais'] / (vida * 12))}")
+    print(f"Economia mensal estimada na conta de luz (carro + casa): {reais(r['economia_mensal_reais'])}")
 
     if r["retorno_anos"] is None:
         print("Tempo de retorno: não calculável (sem economia).")
@@ -598,6 +757,8 @@ def mostrar_dimensionamento(dados, energia_kwh_mes):
     if r["acima_da_faixa_de_preco"]:
         print("Atenção: esse porte passa de 4 kWp, faixa sem preço pesquisado. "
               "O investimento pode estar subestimado.")
+
+    mostrar_fontes(dados, CHAVES_DIMENSIONAMENTO)
 
     print("\nSimplificações: sem sombra, sem bateria, sistema ligado à rede,\n"
           "sem considerar o consumo mínimo cobrado pela distribuidora,\n"
@@ -630,14 +791,27 @@ def fluxo_tipo(assistente, dados, viagem, tipo):
 
     mostrar_resultado(escolhida, viagem, resultados[escolhida], dados, tipo_tarifa)
     mostrar_comparacao(escolhida, resultados, opcoes)
+    recomendacao = montar_recomendacao(resultados, opcoes)
+    mostrar_recomendacao(escolhida, resultados, recomendacao)
+    mostrar_fontes_comparacao(escolhida, opcoes, dados, tipo_tarifa)
 
     if escolhida == "eletrico_solar":
         if assistente.ler_sim_nao("\nQuer um dimensionamento simples dos painéis "
                                   "para mais precisão? (s/n): "):
             mostrar_dimensionamento(dados, resultados[escolhida]["energia_kwh"])
 
-    return NOMES[escolhida]
-
+    r = resultados[escolhida]
+    return {
+        "tipo": tipo,
+        "opcao": NOMES[escolhida],
+        "tipo_tarifa": tipo_tarifa or "",
+        "energia_kwh": round(r["energia_kwh"], 2),
+        "custo_reais": round(r["custo_reais"], 2),
+        "co2_kg": round(r["co2_kg"], 2),
+        "menor_custo": texto_melhores(recomendacao["custo_reais"]),
+        "menor_energia": texto_melhores(recomendacao["energia_kwh"]),
+        "menor_co2": texto_melhores(recomendacao["co2_kg"]),
+    }
 
 # ----------------------------------------------------------------------
 # 10. Função principal (é a que o assistente.py chama)
@@ -660,13 +834,13 @@ def executar(assistente):
     print("Digite 0 em qualquer pergunta para voltar ao menu principal.")
 
     viagem = None
-    escolhas = []        # opções que o usuário viu (para o histórico)
+    analises = []
 
     try:
         viagem = perguntar_viagem(assistente, dados)
 
         tipo = perguntar_tipo(assistente)
-        escolhas.append(fluxo_tipo(assistente, dados, viagem, tipo))
+        analises.append(fluxo_tipo(assistente, dados, viagem, tipo))
 
         # Extra: mostrar o outro tipo de transporte para o mesmo trajeto
         if tipo == "proprio":
@@ -674,16 +848,36 @@ def executar(assistente):
         else:
             outro, pergunta = "proprio", "transporte próprio"
         if assistente.ler_sim_nao(f"\nQuer ver como ficaria no {pergunta}? (s/n): "):
-            escolhas.append(fluxo_tipo(assistente, dados, viagem, outro))
+            analises.append(fluxo_tipo(assistente, dados, viagem, outro))
 
     except VoltarAoMenu:
         print("\nVoltando ao menu principal.")
 
-    if not escolhas:             # saiu antes de ver qualquer resultado
+    if not analises:             # saiu antes de ver qualquer resultado
         return None
 
     ajudou = assistente.ler_sim_nao(
         "\nEssas informações foram úteis para você? (s/n): ")
-    descricao = ("Transporte e energia: " + " e ".join(escolhas)
-                 + f" ({viagem['origem']})")
-    return {"descricao": descricao, "ajudou": ajudou}
+
+    registros = []
+    for a in analises:
+        registros.append({
+            "descricao": f"Transporte e energia: {a['opcao']} ({viagem['origem']})",
+            "extras": {
+                "tipo_transporte": a["tipo"],
+                "opcao_escolhida": a["opcao"],
+                "origem_trajeto": viagem["origem"],
+                "km_ida": round(float(viagem["km_por_viagem"]), 1),
+                "dias_semana": int(round(viagem["dias_semana"])),
+                "viagens_mes": round(viagem["viagens_mes"], 1),
+                "km_mes": round(viagem["km_mes"], 1),
+                "tipo_tarifa": a["tipo_tarifa"],
+                "energia_kwh_mes": a["energia_kwh"],
+                "custo_reais_mes": a["custo_reais"],
+                "co2_kg_mes": a["co2_kg"],
+                "menor_custo": a["menor_custo"],
+                "menor_energia": a["menor_energia"],
+                "menor_co2": a["menor_co2"],
+            },
+        })
+    return {"ajudou": ajudou, "registros": registros}

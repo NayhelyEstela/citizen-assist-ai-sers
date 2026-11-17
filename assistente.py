@@ -25,7 +25,12 @@ PADROES_DADO_PESSOAL = [
 
 CAMPOS_CSV = ["data", "sessao", "origem", "pergunta", "id_orientacao",
               "encontrou", "ajudou", "tentativas", "tempo_segundos",
-              "confianca", "nota_facilidade"]
+              "confianca", "nota_facilidade",
+              # --- só preenchidos nos atendimentos de energia (origem = "energia") ---
+              "tipo_transporte", "opcao_escolhida", "origem_trajeto",
+              "km_ida", "dias_semana", "viagens_mes", "km_mes", "tipo_tarifa",
+              "energia_kwh_mes", "custo_reais_mes", "co2_kg_mes",
+              "menor_custo", "menor_energia", "menor_co2"]
 
 
 def entrada(texto):
@@ -122,9 +127,9 @@ class Assistente:
             return False
 
     def registrar(self, origem, pergunta, id_orientacao, encontrou,
-                  ajudou, tentativas, tempo, confianca=None):
+                  ajudou, tentativas, tempo, confianca=None, extras=None):
         """Guarda um atendimento no histórico e já salva no arquivo."""
-        self.historico.append({
+        registro = {
             "data": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "sessao": self.sessao,
             "origem": origem,                 # "pergunta" ou "categoria"
@@ -136,7 +141,10 @@ class Assistente:
             "tempo_segundos": tempo,
             "confianca": confianca,
             "nota_facilidade": None,          # preenchida ao sair
-        })
+        }
+        if extras:
+            registro.update(extras)
+        self.historico.append(registro)
         self.salvar_historico()
 
     # ------------------------------------------------------------------
@@ -246,8 +254,11 @@ class Assistente:
         resultado = modulo_energia.executar(self)
         if resultado is None:       # saiu antes de ver qualquer resultado
             return
-        self.registrar("energia", resultado["descricao"], None, True,
-                       resultado["ajudou"], 1, round(time.time() - inicio, 1))
+        tempo = round(time.time() - inicio, 1)
+        # Um registro por tipo de transporte analisado (cada um com seus dados)
+        for item in resultado["registros"]:
+            self.registrar("energia", item["descricao"], None, True,
+                           resultado["ajudou"], 1, tempo, extras=item["extras"])
 
     # ------------------------------------------------------------------
     # Indicadores
